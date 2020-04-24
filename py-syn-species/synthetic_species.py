@@ -1,4 +1,5 @@
 import random
+import sys
 from typing import List
 import os
 
@@ -305,5 +306,18 @@ def save_formula(form: str, f_in: str):
 
 
 if __name__ == "__main__":
-    gen_new_data()
+    """
+    to run: python3 synthetic_species.py <file_name> <num_cov>
+    
+    both <file_name> and <num_cov> are optional
+    """
+    if len(sys.argv) > 2:
+        f_in = sys.argv[1]
+        num_cov = int(sys.argv[2])
+        gen_new_data(num_occ_covariates=num_cov, og_file=f_in)
+    elif len(sys.argv) == 2:
+        f_in = sys.argv[1]
+        gen_new_data(og_file=f_in)
+    else:
+        gen_new_data()
 
