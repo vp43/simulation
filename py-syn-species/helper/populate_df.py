@@ -19,7 +19,6 @@ def populate_df(df, occupied, detected, f_out):
 
     df = df.assign(occupied_prob=occupied)
     df = df.assign(species_observed_syn_prob=detected)
-    print(df.head(5))
     df.to_csv(f_out)
     return df
 
@@ -47,7 +46,6 @@ def zero_or_one_df(df, f_out):
 
     df = df.assign(occupied=occupied)
     df = df.assign(species_observed_syn=detected)
-    print(df.head(5))
     df.to_csv(f_out)
     return df
 

@@ -15,8 +15,11 @@ QUADRATIC = "quadratic"
 SQUARE_ROOT = "sqrt"
 EXPONENTIAL = "exponential"
 
+# do you want to generate a linearly related synthetic species?
+IS_LINEAR_EQ = True
 
-def gen_new_data(num_occ_covariates=8, og_file="weta_data_baseline.csv"):
+
+def gen_new_data(num_occ_covariates=5, og_file="NORM_weta_data_baseline.csv"):
     """
     generates a synthetic species given a csv of checklists and writes
     the new species to a file.
@@ -29,8 +32,14 @@ def gen_new_data(num_occ_covariates=8, og_file="weta_data_baseline.csv"):
                                     observation; < 10 results in highly separated
                                     distributions
     :param og_file:             original file containing checklists of a particular
-                                species and environment variables appended to each
-                                checklist
+                                    species and environment variables appended to each
+                                    checklist. data should be normalized.
+                                This can be done by running through the ICB_DataPrep_SharedCode.R
+                                    script in the shared box.  It should then be normalized, which
+                                    can be as simple as running the normalize function on the dataset
+                                    from the BBmisc package in R (though you will want to exclude
+                                    latitude and longitude from the normalization 1 way to do this is
+                                    by making them characters
     :return:
     the new dataframe
     """
@@ -47,21 +56,19 @@ def gen_new_data(num_occ_covariates=8, og_file="weta_data_baseline.csv"):
 
         if to_save == 'y':
             i = 0
-            while os.path.exists(f"data/syn_spec/syn_species_{i}.csv"):
+            while os.path.exists(f"py-syn-species/data/syn_species_{i}.csv"):
                 i += 1
-            file_name = f"data/syn_spec/syn_species_{i}.csv"
-            formula_file = f"data/syn_spec/syn_species_{i}_formula.csv"
+            file_name = f"py-syn-species/data/syn_species_{i}.csv"
+            formula_file = f"py-syn-species/data/syn_species_{i}_formula.csv"
             save_formula(both_form, formula_file)
-            print(f"saving dataframe to {file_name}")
             prob_df = populate_df.populate_df(
                 df=df,
                 occupied=occ_obj.gen_values,
                 detected=det_obj.gen_values,
                 f_out=file_name
             )
-
-            final_df_txt = f"data/zero_one_syn_spec/syn_species_{i}.csv"
-            populate_df.zero_or_one_df(prob_df, final_df_txt)
+            print(f"saving dataframe to {file_name}")
+            populate_df.zero_or_one_df(prob_df, file_name)
             break
         else:
             print("data looks bad :( ... generating new formulas!!")
@@ -88,7 +95,6 @@ def gen_occupation_data(df, num_occ_covariates: int):
     print(f"covariates: {occ_covariates}")
     occ_formula = ""
     occ_coefficients = None
-    occ_prob = None
     occupied = None
 
     rerun = True
@@ -111,13 +117,9 @@ def gen_occupation_data(df, num_occ_covariates: int):
                 num90s += 1
             if 0 <= float(i) <= .1:
                 num10s += 1
-        occ_prob = (num1s / size)
 
-        print(f"num 10s: {num10s}")
-        print(f"num 90s: {num90s}")
-        print(f"num 1s: {num1s}")
-
-        if num1s < (size * .7):
+        # if the number of prob that are 1.00 is greater than 90%, rerun
+        if num1s < (size * .9):
             # if the number of prob that are between .9 and 1 is greater than 70%, rerun
             if num90s > (size * .7):
                 print(f"num90s: {num90s}")
@@ -141,7 +143,6 @@ def gen_occupation_data(df, num_occ_covariates: int):
         covariate_list=occ_covariates,
         coefficient_dict=occ_coefficients,
         new_values=occupied,
-        probability=occ_prob
     )
 
     return occupied_object
@@ -168,7 +169,6 @@ def gen_detection_data(df: DataFrame):
     det_formula = ""
     detected = None
     det_coefficients = None
-    det_prob = None
 
     rerun = True
     while rerun:
@@ -188,18 +188,14 @@ def gen_detection_data(df: DataFrame):
             if 0 <= float(i) < .1:
                 num10s += 1
 
-        det_prob = num1s / size
-        print(f"num 10s: {num10s}")
-        print(f"num 90s: {num90s}")
-        print(f"num 1s: {num1s}")
-
-        if num1s < (size * .7):
-            # if the number of prob that are between .9 and 1 is greater than 20%, rerun
+        # if the number of prob that are 1.00 is greater than 90%, rerun
+        if num1s < (size * .9):
+            # if the number of prob that are between .9 and 1 is greater than 70%, rerun
             if num90s > (size * .7):
                 print(f"num90s: {num90s}")
                 print("rerunning (prob is bad)")
                 rerun = True
-                # if the number of prob that are between 0 and .1 is greater than 70%, rerun
+            # if the number of prob that are between 0 and .1 is greater than 70%, rerun
             elif num10s > (size * .7):
                 print(f"num10s: {num10s}")
                 print("rerunning (prob is bad)")
@@ -216,7 +212,6 @@ def gen_detection_data(df: DataFrame):
         covariate_list=det_covariates,
         coefficient_dict=det_coefficients,
         new_values=detected,
-        probability=det_prob
     )
 
     return detection_obj
@@ -241,21 +236,19 @@ def make_coefficients(formula: str, covariate_list: List[str]):
         if random.randint(0, 1):
             beta_i *= -1
         form = random.randint(0, 100)
+        if IS_LINEAR_EQ:
+            form = 0
         # linear
-        if form < 25:
+        if form < 33:
             formula += f" + {beta_i} * {cov}"
             coefficients[cov] = (beta_i, LINEAR)
-        # sqrt
-        elif 25 <= form < 50:
-            formula += f" + {beta_i} * {cov} ^(1/2)"
-            coefficients[cov] = (beta_i, SQUARE_ROOT)
         # quadratic
-        elif 50 <= form < 75:
+        elif 33 <= form < 66:
             formula += f" + {beta_i} * {cov} ^2"
             coefficients[cov] = (beta_i, QUADRATIC)
         # exponential
         else:
-            formula += f" + {beta_i} * e^(-{cov})"
+            formula += f" + {beta_i} * e^({cov})"
             coefficients[cov] = (beta_i, EXPONENTIAL)
 
     return formula, coefficients
@@ -263,7 +256,7 @@ def make_coefficients(formula: str, covariate_list: List[str]):
 
 def gen_single_values(df, covariate_list: List[str], coefficient_dict: dict):
     """
-    generates probabilities of a single column given a list of covariates
+    generates probabilities for a single column given a list of covariates
     and the corresponding beta coefficients
 
     :param df:                  dataframe of interest
@@ -279,21 +272,14 @@ def gen_single_values(df, covariate_list: List[str], coefficient_dict: dict):
         col_sum = 0
         for covariate in covariate_list:
             val = float(row[covariate])
-            # normalizing step ... logical?
-            while val > 100:
-                val = val / 100
             coefficient_type = coefficient_dict[covariate][1]
             coefficient = coefficient_dict[covariate][0]
             if coefficient_type == LINEAR:
                 col_sum += coefficient * val
-            elif coefficient_type == SQUARE_ROOT:
-                if val < 0:
-                    val = -val
-                col_sum += coefficient * np.math.pow(val, .5)
             elif coefficient_type == QUADRATIC:
                 col_sum += coefficient * np.math.pow(val, 2)
             elif coefficient_type == EXPONENTIAL:
-                col_sum += np.math.exp(-val)
+                col_sum += np.math.exp(val)
             else:
                 print(f"covariate: {covariate} coefficient {coefficient_type} is not linear, quad, or exp ...")
                 assert 1 == 0
