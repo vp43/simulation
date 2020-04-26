@@ -2,22 +2,24 @@
 remove(list=ls())
 source("genRandDataset.R")
 
-##############################################################
+########################################################################
 # Data Generator for Occupancy-Detection modelss             
 # Inputs: nSites					                                   
-#         nVisits (to each site)                             
-#         idx (for ID of multiple generations)               
-#         formula.type ("linear", "quadratic", "exponential")
-# Returns: list containing occCovars (nSites x nOccCovars),  
-#          detCovars (nSites*nVisits x nDetCovars), 	       
-#	         detHists (nSites*nVisits x 1), and		             
-#	         index (nSites*nVisits x 1) indicating which site  
-#	         the corresponding observation in detHists came    
-#	         from		
+#					nVisits (to each site)                             
+#					idx (for ID of multiple generations)               
+#					formula.type ("linear", "quadratic", "exponential")
+# Returns: Saved files of training/validation/test sets.
+#					 Each dataset contains 
+#					 - occCovars: occupancy covariates 
+#          - detCovars: detection covariates
+#          - occProbs: occupancy probabilitis
+#          - detProbs: detection probabilitis
+#          - trueOcc: sampled true occupancy status
+#          - detHist: detection history based on trueOcc and detProbs
 # How to Run: run(nSites,nVisits,idx,write.flag,formula.type) 
 #             e.g. run(300,3,1,TRUE,"linear") 
 #             e.g. run(600,5,2,FALSE,"quadratic")     		    	     	                       
-##############################################################
+########################################################################
 run <- function(nSites, nVisits, idx, write.flag, formula.type="linear") {
 	# Generate and load datasets
 	myData <- generateData(nSites, nVisits, idx, formula.type)
@@ -26,7 +28,7 @@ run <- function(nSites, nVisits, idx, write.flag, formula.type="linear") {
 
 generateData <- function(nSites, nVisits, idx, formula.type) {
 	random.flag = FALSE 
-	# If random.flalg = TRUE, it randomly selects relevant covariates and also formula type.
+	# If random.flalg = TRUE, randomly select relevant covariates and formula type.
 	# If random.flalg = FALSE, the relevant covars is all covariates, 
 	
 	# Create directories
@@ -49,8 +51,8 @@ generateData <- function(nSites, nVisits, idx, formula.type) {
 	else {formula.id = 0.9}
 		 
 	# Generate new synthetic data with given formula.
-	synData = generateSynData(randCovars$occCovars, randCovars$detCovars, randCovars$index, 
-							 random.flag, formula.id)
+	synData = generateSynData(randCovars$occCovars, randCovars$detCovars, 
+								            randCovars$index, random.flag, formula.id)
 	print(synData$occForm)	
 	
 	# Check if the generated distributions of occupancy and detection are reasonable.
@@ -128,7 +130,8 @@ generateData <- function(nSites, nVisits, idx, formula.type) {
 	validateData$detCoeffs  = synData$detCoeffs
 	testData$detCoeffs  = synData$detCoeffs
 	
-	return(list(synData=synData, trainData=trainData, validateData=validateData, testData=testData, save.path=save.path))
+	return(list(synData=synData, trainData=trainData, validateData=validateData, 
+	            testData=testData, save.path=save.path))
 }
 
 saveData <- function(myData) {
@@ -142,7 +145,8 @@ saveData <- function(myData) {
 	dev.off()
 	
 	png(paste(myData$save.path,"sampling_dist.png",sep=""))
-	plot(myData$testData$occProbs, myData$testData$Ztrue, xlab="True Occupancy Probabilities", ylab="True Occupancy (0/1)")
+	plot(myData$testData$occProbs, myData$testData$Ztrue, 
+	     xlab="True Occupancy Probabilities", ylab="True Occupancy (0/1)")
 	dev.off()
 	
 	# Save training/validation/test sets
@@ -174,10 +178,16 @@ saveNewDataset <- function(dataList, data.type, save.path)  {
 	# Save an object in a RData format
 	save(dataList, file = paste(save.path,data.type,"Data.RData",sep="") )
 	# Save an object to seperate files for Python programs
-	write.table(dataList$occCovars, paste(save.path,data.type,"_occCovars.csv",sep=""), row.names=F, col.names=F, sep=",")
-	write.table(dataList$detCovars, paste(save.path,data.type,"_detCovars.csv",sep=""), row.names=F, col.names=F, sep=",")
-	write.table(dataList$occProbs, paste(save.path,data.type,"_occProbs.csv",sep=""), row.names=F, col.names=F, sep=",")
-	write.table(dataList$Ztrue, paste(save.path,data.type,"_trueOcc.csv",sep=""), row.names=F, col.names=F, sep=",")
-	write.table(dataList$detProbs, paste(save.path,data.type,"_detProbs.csv",sep=""), row.names=F, col.names=F, sep=",")
-	write.table(dataList$detHists, paste(save.path,data.type,"_detHists.csv",sep=""), row.names=FALSE, col.names=FALSE, sep=",")
+	write.table(dataList$occCovars, paste(save.path,data.type,"_occCovars.csv",sep=""), 
+	            row.names=F, col.names=F, sep=",")
+	write.table(dataList$detCovars, paste(save.path,data.type,"_detCovars.csv",sep=""), 
+	            row.names=F, col.names=F, sep=",")
+	write.table(dataList$occProbs, paste(save.path,data.type,"_occProbs.csv",sep=""), 
+	            row.names=F, col.names=F, sep=",")
+	write.table(dataList$Ztrue, paste(save.path,data.type,"_trueOcc.csv",sep=""),
+             	row.names=F, col.names=F, sep=",")
+	write.table(dataList$detProbs, paste(save.path,data.type,"_detProbs.csv",sep=""),
+            	row.names=F, col.names=F, sep=",")
+	write.table(dataList$detHists, paste(save.path,data.type,"_detHists.csv",sep=""),
+	            row.names=FALSE, col.names=FALSE, sep=",")
 }
