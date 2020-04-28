@@ -61,7 +61,7 @@ generateData <- function(nSites, nVisits, idx, formula.type) {
 	#Pd_balance = sd(hist(synData$detProbs, plot=FALSE)$counts)
 	while ( Pz_balance > threshold & min(synData$detProbs) > 0.1) {
 		synData = genRandDataset(demoData$occCovars, demoData$detCovars, demoData$index, 
-							     random.flag, formula.type)
+							     random.flag, formula.id)
 		Pz_balance = sd(hist(synData$occProbs, plot=FALSE)$counts)
 		cat(c(Pz_balance, Pd_balance, "\n"))
 		cat(c(min(synData$detProbs), "\n"))
